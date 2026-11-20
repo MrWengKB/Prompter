@@ -1,6 +1,6 @@
 # Prompter
 
-A prompt generator for generative AI. Pick a category, fill in parameters (or tap the suggestion chips), and Prompter combines them into one well-structured prompt. One click copies it and opens your AI tool of choice.
+A prompt generator for generative AI. Pick a category, fill in parameters (or pick from the dropdowns), and Prompter combines them into one well-structured prompt. One click copies it and opens your AI tool of choice.
 
 **Live app:** https://mrwengkb.github.io/Prompter/ (once GitHub Pages is enabled, see below)
 

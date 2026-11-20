@@ -468,16 +468,27 @@
         return;
       }
       const sel = raw[f.id];
-      const isOn = (o) => (f.type === 'multi' ? Array.isArray(sel) && sel.includes(o) : sel === o);
-      const chips = f.options.map((o) =>
-        `<button type="button" class="chip" data-id="${f.id}" data-val="${esc(o)}" aria-pressed="${isOn(o)}">${esc(t(o))}</button>`).join('');
+      let picker;
+      if (f.type === 'multi') {
+        const arr = Array.isArray(sel) ? sel : [];
+        const opts = f.options.map((o) =>
+          `<label class="ms-opt"><input type="checkbox" data-ms="${f.id}" value="${esc(o)}" ${arr.includes(o) ? 'checked' : ''}><span>${esc(t(o))}</span></label>`).join('');
+        picker = `<div class="ms" data-ms-box="${f.id}"><button type="button" class="sel ms-btn" id="${fid}" aria-haspopup="true" aria-expanded="false">${msSummary(f, arr)}</button><div class="ms-panel" hidden>${opts}</div></div>`;
+      } else {
+        const opts = f.options.map((o) => `<option value="${esc(o)}" ${sel === o ? 'selected' : ''}>${esc(t(o))}</option>`).join('');
+        picker = `<select class="sel" id="${fid}" data-id="${f.id}"><option value="">${u('choose')}</option>${opts}</select>`;
+      }
       const custom = f.custom === false ? '' :
         `<input class="custom-in" data-id="${f.id}_c" value="${esc(raw[f.id + '_c'] || '')}" placeholder="${esc(f.placeholder ? t(f.placeholder) : u('other'))}" aria-label="${label}">`;
-      html += `<div class="field"><span class="field-label">${label}${tag}${f.type === 'multi' ? `<span class="opt">${u('pickAny')}</span>` : ''}</span><div class="chips" role="group" aria-label="${label}">${chips}</div>${custom}</div>`;
+      html += `<div class="field"><label class="field-label" for="${fid}">${label}${tag}${f.type === 'multi' ? `<span class="opt">${u('pickAny')}</span>` : ''}</label><div class="pair${custom ? '' : ' solo'}">${picker}${custom}</div></div>`;
     });
     if (open) html += '</div>';
     form.innerHTML = html;
     $('#surpriseBtn').hidden = !cat.surprise;
+  }
+
+  function msSummary(f, arr) {
+    return arr.length ? `<span class="ms-val">${esc(arr.map(t).join(LANG === 'zh' ? '、' : ', '))}</span>` : `<span class="ms-ph">${u('chooseMulti')}</span>`;
   }
 
   function renderFlavor() {
@@ -571,40 +582,52 @@
     persist(); renderAll();
   });
 
-  form.addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip');
-    if (!chip) return;
-    const f = CATEGORIES[state.cat].fields.find((x) => x.id === chip.dataset.id);
-    const raw = state.values[state.cat];
-    const val = chip.dataset.val;
-    if (f.type === 'multi') {
-      const arr = Array.isArray(raw[f.id]) ? raw[f.id] : [];
-      raw[f.id] = arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
-      chip.setAttribute('aria-pressed', raw[f.id].includes(val));
-    } else {
-      raw[f.id] = raw[f.id] === val ? '' : val;
-      chip.parentElement.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c.dataset.val === raw[f.id]));
-      // Picking a chip replaces a typed custom value for single-choice fields.
-      if (raw[f.id] && raw[f.id + '_c']) {
-        raw[f.id + '_c'] = '';
-        const ci = form.querySelector(`[data-id="${f.id}_c"]`);
-        if (ci) ci.value = '';
-      }
-    }
-    changed();
+  // Multi-select dropdowns: open/close
+  const closePanels = (except) => form.querySelectorAll('.ms').forEach((m) => {
+    if (m === except) return;
+    m.querySelector('.ms-panel').hidden = true;
+    m.querySelector('.ms-btn').setAttribute('aria-expanded', 'false');
   });
+  form.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ms-btn');
+    if (!btn) return;
+    const box = btn.parentElement;
+    const panel = box.querySelector('.ms-panel');
+    closePanels(box);
+    panel.hidden = !panel.hidden;
+    btn.setAttribute('aria-expanded', String(!panel.hidden));
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.ms')) closePanels(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanels(); });
 
   form.addEventListener('input', (e) => {
     const el = e.target;
-    if (!el.dataset.id) return;
     const raw = state.values[state.cat];
+    if (el.dataset.ms) {
+      const id = el.dataset.ms;
+      const f = CATEGORIES[state.cat].fields.find((x) => x.id === id);
+      const box = el.closest('.ms');
+      // Keep the options' original order.
+      raw[id] = f.options.filter((o) => box.querySelector(`input[value="${CSS.escape(o)}"]`).checked);
+      box.querySelector('.ms-btn').innerHTML = msSummary(f, raw[id]);
+      changed();
+      return;
+    }
+    if (!el.dataset.id) return;
     raw[el.dataset.id] = el.type === 'checkbox' ? el.checked : el.value;
     // Typing a custom value for a single-choice field clears the selected chip.
     const base = el.dataset.id.replace(/_c$/, '');
     const f = CATEGORIES[state.cat].fields.find((x) => x.id === base);
     if (el.dataset.id.endsWith('_c') && f && f.type === 'choice' && el.value.trim()) {
       raw[base] = '';
-      el.parentElement.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      const s = el.parentElement.querySelector('select');
+      if (s) s.value = '';
+    }
+    // Choosing from a single-choice dropdown replaces a typed custom value.
+    if (el.tagName === 'SELECT' && el.value && raw[el.dataset.id + '_c']) {
+      raw[el.dataset.id + '_c'] = '';
+      const ci = el.parentElement.querySelector('.custom-in');
+      if (ci) ci.value = '';
     }
     changed();
   });
