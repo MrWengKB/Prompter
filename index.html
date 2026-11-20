@@ -14,10 +14,13 @@
       <span class="logo" aria-hidden="true">P</span>
       <div>
         <h1>Prompter</h1>
-        <p class="tagline">Fill in the parameters. Get a great prompt. Send it anywhere.</p>
+        <p class="tagline" data-i18n="tagline">Fill in the parameters. Get a great prompt. Send it anywhere.</p>
       </div>
     </div>
-    <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">🌓</button>
+    <div class="top-actions">
+      <button id="langToggle" class="icon-btn lang-btn" type="button" data-i18n="langBtn" data-i18n-title="langTitle">中文</button>
+      <button id="themeToggle" class="icon-btn" type="button" data-i18n-title="themeTitle" aria-label="Toggle dark mode" title="Toggle dark mode">🌓</button>
+    </div>
   </header>
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="Prompt category"></nav>
@@ -25,11 +28,11 @@
   <main class="layout">
     <section class="panel form-panel" aria-labelledby="formTitle">
       <div class="panel-head">
-        <h2 id="formTitle">Parameters</h2>
+        <h2 id="formTitle" data-i18n="parameters">Parameters</h2>
         <div class="head-actions">
-          <button type="button" class="btn ghost small" id="surpriseBtn" title="Pick random options">🎲 Surprise me</button>
-          <button type="button" class="btn ghost small" id="exampleBtn" title="Fill in an example">Example</button>
-          <button type="button" class="btn ghost small" id="resetBtn" title="Clear all fields">Clear</button>
+          <button type="button" class="btn ghost small" id="surpriseBtn" data-i18n="surprise">🎲 Surprise me</button>
+          <button type="button" class="btn ghost small" id="exampleBtn" data-i18n="example">Example</button>
+          <button type="button" class="btn ghost small" id="resetBtn" data-i18n="clear">Clear</button>
         </div>
       </div>
       <form id="form" autocomplete="off" onsubmit="return false"></form>
@@ -37,39 +40,40 @@
 
     <aside class="panel output-panel" aria-labelledby="outTitle">
       <div class="panel-head">
-        <h2 id="outTitle">Your prompt</h2>
+        <h2 id="outTitle" data-i18n="yourPrompt">Your prompt</h2>
         <div class="seg" id="flavorSeg" role="radiogroup" aria-label="Prompt style"></div>
       </div>
 
       <textarea id="output" class="output" spellcheck="false" aria-label="Generated prompt (editable)"></textarea>
       <div class="out-meta">
         <span id="charCount">0 characters</span>
-        <button type="button" class="link-btn" id="regenBtn" hidden>Edited by hand. Undo edits</button>
+        <button type="button" class="link-btn" id="regenBtn" hidden data-i18n="edited">Edited by hand. Undo edits</button>
       </div>
 
       <div class="out-actions">
-        <button type="button" class="btn primary" id="copyBtn">Copy prompt</button>
-        <button type="button" class="btn" id="shareBtn" title="Copy a link that reopens these settings">Copy share link</button>
+        <button type="button" class="btn primary" id="copyBtn" data-i18n="copy">Copy prompt</button>
+        <button type="button" class="btn" id="shareBtn" data-i18n="share">Copy share link</button>
       </div>
 
-      <h3 class="sub">Copy &amp; open in</h3>
-      <p class="hint">One click copies the prompt and opens the tool. Tools marked <span class="badge">auto-fill</span> receive the prompt directly; for the rest, just paste (Ctrl/⌘+V).</p>
+      <h3 class="sub" data-i18n="openIn">Copy &amp; open in</h3>
+      <p class="hint" data-i18n-html="hint">One click copies the prompt and opens the tool. Tools marked <span class="badge">auto-fill</span> receive the prompt directly; for the rest, just paste (Ctrl/⌘+V).</p>
       <div class="tools" id="tools"></div>
 
       <details class="history" id="historyBox">
-        <summary>Recent prompts <span id="historyCount"></span></summary>
+        <summary><span data-i18n="recent">Recent prompts</span> <span id="historyCount"></span></summary>
         <ul id="historyList"></ul>
-        <button type="button" class="link-btn" id="clearHistory">Clear history</button>
+        <button type="button" class="link-btn" id="clearHistory" data-i18n="clearHistory">Clear history</button>
       </details>
     </aside>
   </main>
 
-  <footer class="foot">Runs entirely in your browser. Nothing you type is sent anywhere until you choose a tool.</footer>
+  <footer class="foot" data-i18n="footer">Runs entirely in your browser. Nothing you type is sent anywhere until you choose a tool.</footer>
 
-  <a href="#outTitle" class="fab" id="fab">View prompt ↓</a>
+  <a href="#outTitle" class="fab" id="fab" data-i18n="fab">View prompt ↓</a>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="js/i18n.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

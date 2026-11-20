@@ -18,6 +18,17 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } },
   };
 
+  // ---------- language ----------
+  const I18N = window.PROMPTER_I18N || { ui: { en: {}, zh: {} }, zh: {} };
+  let LANG = store.get('prompter.lang', null) || (/^zh/i.test(navigator.language || '') ? 'zh' : 'en');
+  if (LANG !== 'zh') LANG = 'en';
+  const t = (s) => (LANG === 'zh' && s && I18N.zh[s]) || s; // translate a label/option
+  const u = (key, vars) => { // interface string
+    let str = (I18N.ui[LANG] && I18N.ui[LANG][key]) || I18N.ui.en[key] || key;
+    if (vars) Object.keys(vars).forEach((k) => { str = str.replace('{' + k + '}', vars[k]); });
+    return str;
+  };
+
   // ---------- field builders ----------
   const text = (id, label, o = {}) => ({ id, label, type: 'text', ...o });
   const area = (id, label, o = {}) => ({ id, label, type: 'textarea', ...o });
@@ -264,6 +275,106 @@
     },
   };
 
+  // ---------- Chinese prompt templates ----------
+  const zhEnd = (x) => String(x).trim().replace(/[。.，,；;\s]+$/, '');
+  const zhQuote = (x) => x.replace(/^["'“”「」]+|["'“”「」]+$/g, '');
+
+  CATEGORIES.image.exampleZh = { subject: '一只戴着针织小围巾的红狐狸', foreground: '飘落的枫叶', background_c: '黎明时分雾气弥漫的松林' };
+  CATEGORIES.image.surprise.subjectZh = ['灯塔看守人和她的猫', '一个复古机器人园丁', '一条折纸做成的龙', '正在喝咖啡的宇航员', '一座漂浮的空岛村庄', '在云中游动的锦鲤', '夜晚的街头小吃摊', '茶杯里的一座小房子'];
+  CATEGORIES.image.buildZh = function (v, flavor) {
+    const what = `${zhEnd(v.subject || '[主体]')}${v.action ? '，' + zhEnd(v.action) : ''}`;
+    if (flavor === 'natural') {
+      return [
+        `一张${v.style ? v.style + '风格的' : ''}${v.format || '图像'}：${what}。`,
+        v.foreground && `前景：${zhEnd(v.foreground)}。`,
+        v.background && `背景：${zhEnd(v.background)}。`,
+        v.colours && `配色：${v.colours}。`,
+        v.lighting && `光线：${v.lighting}。`,
+        v.composition && `构图：${v.composition}。`,
+        v.mood && `氛围：${v.mood}。`,
+        v.quality && `细节：${v.quality}。`,
+        v.textInImage && `画面中包含文字“${zhQuote(v.textInImage)}”。`,
+        v.aspect && `画面比例 ${v.aspect}。`,
+        v.negative && `避免：${v.negative}。`,
+      ].filter(Boolean).join('');
+    }
+    const tags = [
+      `一张${v.format || '图像'}，${what}`,
+      v.foreground && `前景是${zhEnd(v.foreground)}`,
+      v.background && `${zhEnd(v.background)}背景`,
+      v.style,
+      v.colours && `${v.colours}配色`,
+      v.lighting,
+      v.composition,
+      v.mood && `${v.mood}的氛围`,
+      v.quality,
+      v.textInImage && `文字“${zhQuote(v.textInImage)}”`,
+    ].filter(Boolean).join('，');
+    if (flavor === 'mj') return tags + (v.aspect ? ` --ar ${v.aspect}` : '') + (v.negative ? ` --no ${v.negative.replace(/、/g, ', ')}` : '');
+    return tags + (v.negative ? `\n\n反向提示词：${v.negative}` : '') + (v.aspect ? `\n\n画面比例：${v.aspect}` : '');
+  };
+
+  CATEGORIES.video.exampleZh = { subject: '一只金毛幼犬', action_c: '在草地上追逐肥皂泡', audio: '鸟鸣声和轻柔的木吉他' };
+  CATEGORIES.video.surprise.subjectZh = ['顺着雨水沟漂流的纸船', '正在翻煎饼的厨师', '飞越峡谷的热气球', '学习画画的机器人', '花丛边的蜂鸟', '黄昏时的滑板少年'];
+  CATEGORIES.video.buildZh = function (v) {
+    const cam = [v.shot, v.camera].filter(Boolean).join('，');
+    return [
+      `一段${v.style ? v.style + '风格的' : ''}视频：${zhEnd(v.subject || '[主体]')}${v.action ? '，' + zhEnd(v.action) : ''}${v.setting ? '，场景是' + zhEnd(v.setting) : ''}。`,
+      v.duration && `时长：${v.duration}。`,
+      cam && `镜头：${cam}。`,
+      v.lighting && `光线：${v.lighting}。`,
+      v.colours && `配色：${v.colours}。`,
+      v.mood && `氛围：${v.mood}。`,
+      v.pacing && `节奏：${v.pacing}。`,
+      v.audio && `声音：${zhEnd(v.audio)}。`,
+      v.aspect && `画面比例 ${v.aspect}。`,
+      v.negative && `避免：${v.negative}。`,
+    ].filter(Boolean).join('');
+  };
+
+  CATEGORIES.text.exampleZh = {
+    topic: '为什么小商家应该开始做电子邮件简报', audience: '没有营销背景、工作繁忙的咖啡店老板', goal: '说服他们本月发出第一期',
+    points: '简报是自己的渠道，不像社交媒体那样受平台控制\n每月只需花一小时\n三个简单的内容点子', length: 'About 1,000 words',
+  };
+  CATEGORIES.text.buildZh = function (v) {
+    const out = [];
+    if (v.role) out.push(`你是一位${zhEnd(v.role)}。`);
+    out.push(`请写一篇${v.task ? zhEnd(v.task) : '文章'}，主题是：${zhEnd(v.topic || '[主题]')}。`);
+    if (v.audience) out.push(`目标读者：${zhEnd(v.audience)}。`);
+    if (v.goal) out.push(`目的：${zhEnd(v.goal)}。`);
+    const pts = lines(v.points);
+    if (pts.length) out.push('需要涵盖的要点：\n' + pts.map((x) => `- ${x}`).join('\n'));
+    if (v.tone) out.push(`语气：${v.tone}。`);
+    if (v.length) out.push(`篇幅：${v.length}。`);
+    if (v.format) out.push(`格式：${v.format}。`);
+    if (v.language) out.push(`请使用${zhEnd(v.language)}写作。`);
+    if (v.constraints) out.push(`限制条件：${zhEnd(v.constraints)}。`);
+    if (v.context) out.push(`请参考以下背景资料：\n"""\n${v.context.trim()}\n"""`);
+    if (v.clarify) out.push('开始之前，请先向我提出你需要澄清的问题。');
+    return out.join('\n\n');
+  };
+
+  CATEGORIES.code.exampleZh = {
+    description: '一个读取订单 CSV 并返回每月总收入的函数',
+    io: '输入：orders.csv，包含 date（YYYY-MM-DD）和 amount 两列\n输出：类似 {"2026-01": 1520.5} 的字典',
+  };
+  CATEGORIES.code.buildZh = function (v) {
+    const out = [];
+    out.push(`你是一位资深的${v.language ? ' ' + v.language + ' ' : ''}软件工程师。`);
+    const task = v.task || '编写新代码';
+    out.push(`任务：${task}${v.language && !/转换/.test(task) ? `（使用 ${v.language}）` : ''}。`);
+    if (v.description) out.push(`需求描述：${zhEnd(v.description)}。`);
+    if (v.framework) out.push(`使用的框架 / 库：${zhEnd(v.framework)}。`);
+    if (v.io) out.push(`输入与预期输出：\n${v.io.trim()}`);
+    if (v.constraints) out.push('要求：\n' + v.constraints.split('、').map((c) => `- ${c}`).join('\n'));
+    const fence = (v.language || '').toLowerCase().replace('c#', 'csharp').replace('c++', 'cpp');
+    if (v.code) out.push(`现有代码：\n\`\`\`${fence}\n${v.code.replace(/\s+$/, '')}\n\`\`\``);
+    if (v.error) out.push(`错误信息：\n\`\`\`\n${v.error.replace(/\s+$/, '')}\n\`\`\``);
+    if (v.output) out.push(`回复格式：${v.output}。`);
+    if (v.clarify) out.push('在写代码之前，请先就任何不明确的地方向我提问。');
+    return out.join('\n\n');
+  };
+
   // ---------- state ----------
   const state = {
     cat: 'image',
@@ -284,6 +395,7 @@
       const data = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
       if (CATEGORIES[data.c]) { state.cat = data.c; state.values[data.c] = data.v || {}; }
       if (data.f) state.flavor = data.f;
+      if (data.l === 'zh' || data.l === 'en') LANG = data.l;
     } catch (e) { /* bad link, ignore */ }
     history.replaceState(null, '', location.pathname + location.search);
   }
@@ -297,8 +409,11 @@
       if (!f.id) return;
       const val = raw[f.id];
       const custom = (raw[f.id + '_c'] || '').trim();
-      if (f.type === 'choice') v[f.id] = custom || val || '';
-      else if (f.type === 'multi') v[f.id] = [...(Array.isArray(val) ? val : []).map(lcFirst), ...(custom ? [custom] : [])].join(', ');
+      if (f.type === 'choice') v[f.id] = custom || t(val) || '';
+      else if (f.type === 'multi') {
+        const items = (Array.isArray(val) ? val : []).map((x) => (LANG === 'zh' ? t(x) : lcFirst(x)));
+        v[f.id] = [...items, ...(custom ? [custom] : [])].join(LANG === 'zh' ? '、' : ', ');
+      }
       else if (f.type === 'toggle') v[f.id] = !!val;
       else v[f.id] = (val || '').trim();
     });
@@ -309,7 +424,10 @@
     const fl = CATEGORIES[state.cat].flavors;
     return fl && fl.some((x) => x.id === state.flavor) ? state.flavor : 'natural';
   };
-  const generated = (flavor = currentFlavor()) => CATEGORIES[state.cat].build(resolved(state.cat), flavor);
+  const generated = (flavor = currentFlavor()) => {
+    const c = CATEGORIES[state.cat];
+    return (LANG === 'zh' && c.buildZh ? c.buildZh : c.build)(resolved(state.cat), flavor);
+  };
   const promptText = () => (state.manual != null ? state.manual : generated());
 
   // ---------- rendering ----------
@@ -318,7 +436,7 @@
 
   function renderTabs() {
     $('#tabs').innerHTML = Object.entries(CATEGORIES).map(([id, c]) =>
-      `<button class="tab" role="tab" type="button" data-cat="${id}" aria-selected="${id === state.cat}"><span aria-hidden="true">${c.icon}</span>${c.label}</button>`).join('');
+      `<button class="tab" role="tab" type="button" data-cat="${id}" aria-selected="${id === state.cat}"><span aria-hidden="true">${c.icon}</span>${esc(t(c.label))}</button>`).join('');
   }
 
   function renderForm() {
@@ -329,32 +447,33 @@
     cat.fields.forEach((f) => {
       if (f.group) {
         if (open) html += '</div>';
-        html += `<div class="group"><p class="group-title">${esc(f.group)}</p>`;
+        html += `<div class="group"><p class="group-title">${esc(t(f.group))}</p>`;
         open = true;
         return;
       }
       const fid = `f-${state.cat}-${f.id}`;
-      const tag = f.required ? ' <span class="req" title="Recommended">*</span>' : f.optional ? '<span class="opt">optional</span>' : '';
+      const tag = f.required ? ' <span class="req">*</span>' : f.optional ? `<span class="opt">${u('optional')}</span>` : '';
+      const label = esc(t(f.label));
       if (f.type === 'toggle') {
-        html += `<div class="field"><label class="toggle"><input type="checkbox" data-id="${f.id}" ${raw[f.id] ? 'checked' : ''}> ${esc(f.label)}</label></div>`;
+        html += `<div class="field"><label class="toggle"><input type="checkbox" data-id="${f.id}" ${raw[f.id] ? 'checked' : ''}> ${label}</label></div>`;
         return;
       }
       if (f.type === 'text' || f.type === 'textarea') {
         const val = esc(raw[f.id] || '');
-        const ph = esc(f.placeholder || '');
+        const ph = esc(t(f.placeholder || ''));
         const input = f.type === 'text'
           ? `<input class="text-in" id="${fid}" data-id="${f.id}" value="${val}" placeholder="${ph}">`
           : `<textarea class="text-in${f.code ? ' code' : ''}" id="${fid}" data-id="${f.id}" rows="${f.rows || 3}" placeholder="${ph}" ${f.code ? 'spellcheck="false"' : ''}>${val}</textarea>`;
-        html += `<div class="field"><label for="${fid}">${esc(f.label)}${tag}</label>${input}</div>`;
+        html += `<div class="field"><label for="${fid}">${label}${tag}</label>${input}</div>`;
         return;
       }
       const sel = raw[f.id];
       const isOn = (o) => (f.type === 'multi' ? Array.isArray(sel) && sel.includes(o) : sel === o);
       const chips = f.options.map((o) =>
-        `<button type="button" class="chip" data-id="${f.id}" data-val="${esc(o)}" aria-pressed="${isOn(o)}">${esc(o)}</button>`).join('');
+        `<button type="button" class="chip" data-id="${f.id}" data-val="${esc(o)}" aria-pressed="${isOn(o)}">${esc(t(o))}</button>`).join('');
       const custom = f.custom === false ? '' :
-        `<input class="custom-in" data-id="${f.id}_c" value="${esc(raw[f.id + '_c'] || '')}" placeholder="${esc(f.placeholder || 'or type your own')}" aria-label="${esc(f.label)}: custom">`;
-      html += `<div class="field"><span class="field-label">${esc(f.label)}${tag}${f.type === 'multi' ? '<span class="opt">pick any</span>' : ''}</span><div class="chips" role="group" aria-label="${esc(f.label)}">${chips}</div>${custom}</div>`;
+        `<input class="custom-in" data-id="${f.id}_c" value="${esc(raw[f.id + '_c'] || '')}" placeholder="${esc(f.placeholder ? t(f.placeholder) : u('other'))}" aria-label="${label}">`;
+      html += `<div class="field"><span class="field-label">${label}${tag}${f.type === 'multi' ? `<span class="opt">${u('pickAny')}</span>` : ''}</span><div class="chips" role="group" aria-label="${label}">${chips}</div>${custom}</div>`;
     });
     if (open) html += '</div>';
     form.innerHTML = html;
@@ -365,26 +484,34 @@
     const fl = CATEGORIES[state.cat].flavors;
     const cur = currentFlavor();
     $('#flavorSeg').innerHTML = fl ? fl.map((x) =>
-      `<button type="button" role="radio" data-flavor="${x.id}" aria-checked="${x.id === cur}">${x.label}</button>`).join('') : '';
+      `<button type="button" role="radio" data-flavor="${x.id}" aria-checked="${x.id === cur}">${esc(t(x.label))}</button>`).join('') : '';
   }
 
   function renderTools() {
     $('#tools').innerHTML = CATEGORIES[state.cat].tools.map((id) => {
-      const t = TOOLS[id];
-      return `<button type="button" class="tool" data-tool="${id}" title="${t.url ? 'Copy and open with the prompt filled in' : 'Copy, then paste in ' + esc(t.name)}">
-        <strong>${esc(t.name)}</strong>${t.url ? '<span class="badge">auto-fill</span>' : '<span class="paste">copy &amp; paste</span>'}</button>`;
+      const name = esc(t(TOOLS[id].name));
+      const tool = TOOLS[id];
+      return `<button type="button" class="tool" data-tool="${id}" title="${tool.url ? u('toolAuto') : u('toolPaste', { t: name })}">
+        <strong>${name}</strong>${tool.url ? `<span class="badge">${u('autofill')}</span>` : `<span class="paste">${u('paste')}</span>`}</button>`;
     }).join('');
   }
 
   function renderOutput() {
     const textOut = promptText();
     if (output.value !== textOut) output.value = textOut;
-    $('#charCount').textContent = `${textOut.length.toLocaleString()} characters`;
+    $('#charCount').textContent = u('chars', { n: textOut.length.toLocaleString() });
     $('#regenBtn').hidden = state.manual == null;
   }
 
+  function renderStatic() {
+    document.documentElement.lang = LANG === 'zh' ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = u(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = u(el.dataset.i18nHtml); });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = u(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
+  }
+
   function renderAll() {
-    renderTabs(); renderForm(); renderFlavor(); renderTools(); renderOutput(); renderHistory();
+    renderStatic(); renderTabs(); renderForm(); renderFlavor(); renderTools(); renderOutput(); renderHistory();
   }
 
   function persist() {
@@ -431,8 +558,8 @@
     const h = store.get('prompter.history', []);
     $('#historyCount').textContent = h.length ? `(${h.length})` : '';
     $('#historyList').innerHTML = h.length ? h.map((x, i) =>
-      `<li><button type="button" data-h="${i}"><span class="h-meta">${esc((CATEGORIES[x.c] || {}).label || '')} · ${new Date(x.t).toLocaleString()}</span><span class="h-text">${esc(x.p)}</span></button></li>`).join('')
-      : '<li class="hint">Prompts you copy will appear here.</li>';
+      `<li><button type="button" data-h="${i}"><span class="h-meta">${esc(t((CATEGORIES[x.c] || {}).label || ''))} · ${new Date(x.t).toLocaleString(LANG === 'zh' ? 'zh-CN' : undefined)}</span><span class="h-text">${esc(x.p)}</span></button></li>`).join('')
+      : `<li class="hint">${u('historyEmpty')}</li>`;
     $('#clearHistory').hidden = !h.length;
   }
 
@@ -492,7 +619,7 @@
   output.addEventListener('input', () => {
     state.manual = output.value === generated() ? null : output.value;
     $('#regenBtn').hidden = state.manual == null;
-    $('#charCount').textContent = `${output.value.length.toLocaleString()} characters`;
+    $('#charCount').textContent = u('chars', { n: output.value.length.toLocaleString() });
   });
   $('#regenBtn').addEventListener('click', () => { state.manual = null; renderOutput(); });
 
@@ -504,16 +631,16 @@
   $('#copyBtn').addEventListener('click', () => {
     const p = promptText();
     copyText(p).then((ok) => {
-      toast(ok ? 'Prompt copied to clipboard' : 'Could not copy. Select the text and copy it manually.');
+      toast(ok ? u('copied') : u('copyFail'));
       if (ok && hasContent()) addHistory(p);
     });
   });
 
   $('#shareBtn').addEventListener('click', () => {
-    const data = { c: state.cat, v: state.values[state.cat], f: state.flavor };
+    const data = { c: state.cat, v: state.values[state.cat], f: state.flavor, l: LANG };
     const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data)))));
     const url = location.href.split('#')[0] + '#s=' + enc;
-    copyText(url).then((ok) => toast(ok ? 'Share link copied' : 'Could not copy the link'));
+    copyText(url).then((ok) => toast(ok ? u('linkCopied') : u('linkFail')));
   });
 
   $('#tools').addEventListener('click', (e) => {
@@ -524,14 +651,14 @@
     const fl = CATEGORIES[state.cat].flavors;
     const flavor = t.flavor && fl && fl.some((x) => x.id === t.flavor) && state.flavor === 'natural' ? t.flavor : currentFlavor();
     const p = state.manual != null ? state.manual : generated(flavor);
-    if (!hasContent() && state.manual == null) { toast('Fill in a few parameters first'); return; }
+    if (!hasContent() && state.manual == null) { toast(u('fillFirst')); return; }
     // Open synchronously inside the click so popup blockers allow it.
     const url = t.url ? t.url(p) : t.open;
     window.open(url, '_blank', 'noopener');
     copyText(p).then((ok) => {
       addHistory(p);
-      const how = t.url ? 'Prompt sent to ' + t.name + ' (also copied)' : 'Copied. Paste it into ' + t.name + ' with Ctrl/⌘+V';
-      toast(ok ? how : (t.url ? 'Opened ' + t.name : 'Opened ' + t.name + ', but copying failed. Copy the prompt manually.'));
+      const name = { t: I18N.zh[t.name] && LANG === 'zh' ? I18N.zh[t.name] : t.name };
+      toast(ok ? u(t.url ? 'sentTo' : 'pasteInto', name) : u(t.url ? 'opened' : 'openedFail', name));
     });
   });
 
@@ -545,7 +672,7 @@
     renderAll();
     state.manual = item.p === generated() ? null : item.p;
     renderOutput(); persist();
-    toast('Loaded from history');
+    toast(u('loaded'));
   });
   $('#clearHistory').addEventListener('click', () => { store.set('prompter.history', []); renderHistory(); });
 
@@ -554,14 +681,15 @@
     renderForm(); renderOutput(); persist();
   });
   $('#exampleBtn').addEventListener('click', () => {
-    state.values[state.cat] = JSON.parse(JSON.stringify(CATEGORIES[state.cat].example || {}));
+    const c = CATEGORIES[state.cat];
+    state.values[state.cat] = JSON.parse(JSON.stringify({ ...(c.example || {}), ...(LANG === 'zh' ? c.exampleZh || {} : {}) }));
     state.manual = null;
     renderForm(); renderOutput(); persist();
   });
   $('#surpriseBtn').addEventListener('click', () => {
     const cat = CATEGORIES[state.cat];
     if (!cat.surprise) return;
-    const v = { subject: pick(cat.surprise.subject) };
+    const v = { subject: pick((LANG === 'zh' && cat.surprise.subjectZh) || cat.surprise.subject) };
     cat.fields.forEach((f) => {
       if (f.type === 'choice' && f.id !== 'action' && Math.random() < 0.85) v[f.id] = pick(f.options);
       if (f.type === 'multi' && f.id !== 'negative' && Math.random() < 0.7) {
@@ -582,6 +710,24 @@
       : window.matchMedia('(prefers-color-scheme: dark)').matches;
     const next = isDark ? 'light' : 'dark';
     applyTheme(next); store.set('prompter.theme', next);
+  });
+
+  $('#langToggle').addEventListener('click', () => {
+    const from = LANG;
+    LANG = LANG === 'zh' ? 'en' : 'zh';
+    // Swap the example's free text to the new language if it hasn't been changed.
+    Object.values(CATEGORIES).forEach((c, i) => {
+      const vals = state.values[Object.keys(CATEGORIES)[i]];
+      Object.keys(c.exampleZh || {}).forEach((k) => {
+        const en = (c.example || {})[k], zh = c.exampleZh[k];
+        if (from === 'en' && vals[k] === en && en) vals[k] = zh;
+        else if (from === 'zh' && vals[k] === zh) vals[k] = en || '';
+      });
+    });
+    persist();
+    store.set('prompter.lang', LANG);
+    state.manual = null;
+    renderAll();
   });
 
   // Keyboard shortcut: Ctrl/⌘+Enter copies.

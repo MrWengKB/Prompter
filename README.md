@@ -22,6 +22,7 @@ Image prompts can be output in three styles: **Natural** (ChatGPT, Gemini, Firef
 
 ## Other features
 
+- **中文 / English toggle** (top right): switches the whole interface, and the generated prompt is written in the same language. The choice is remembered; first visit follows the browser language
 - Live preview; the prompt is editable by hand
 - Example, Surprise me (random image/video ideas) and Clear buttons
 - Share link that reopens the same settings
@@ -39,4 +40,4 @@ Settings → Pages → Build and deployment → Source: **Deploy from a branch**
 
 ## Add a tool or category
 
-Everything is data-driven in `js/app.js`: add an entry to `TOOLS` (with `url` for prefill or `open` for copy & paste), or a new entry in `CATEGORIES` with `fields`, `tools` and a `build()` function.
+Everything is data-driven in `js/app.js` (Chinese labels live in `js/i18n.js`, Chinese prompt templates in each category's `buildZh()`): add an entry to `TOOLS` (with `url` for prefill or `open` for copy & paste), or a new entry in `CATEGORIES` with `fields`, `tools` and a `build()` function.
